@@ -1,0 +1,36 @@
+# Usage (on the Jetson):
+#   MODEL_ID=<org>/<model> docker compose run --rm download-model   # once
+#   MODEL_NAME=<model>     docker compose up -d vllm                # serve
+services:
+  vllm:
+    image: ${IMAGE:-jetson-orin-vllm:jp6-cu126-sm87}
+    build: .
+    runtime: nvidia
+    network_mode: host          # API on the Jetson's port; restrict with HOST below
+    ipc: host
+    init: true
+    stop_grace_period: 90s
+    environment:
+      MODEL_DIR: /models/${MODEL_NAME:?set MODEL_NAME to the folder under ./models}
+      HOST: ${HOST:-127.0.0.1}
+      PORT: ${PORT:-8000}
+      MAX_MODEL_LEN: ${MAX_MODEL_LEN:-8192}
+      GPU_MEMORY_UTILIZATION: ${GPU_MEMORY_UTILIZATION:-0.40}
+      NO_FA2: ${NO_FA2:-0}
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility
+    volumes:
+      - ./models:/models:ro
+
+  download-model:
+    image: ${IMAGE:-jetson-orin-vllm:jp6-cu126-sm87}
+    entrypoint: ["bash", "-c"]
+    # Pin MODEL_REVISION to a commit hash for reproducible deployments.
+    command:
+      - hf download "$${MODEL_ID}" --revision "$${MODEL_REVISION:-main}" --local-dir "/models/$${MODEL_ID##*/}"
+    environment:
+      MODEL_ID: ${MODEL_ID:?set MODEL_ID, e.g. org/model}
+      MODEL_REVISION: ${MODEL_REVISION:-main}
+      HF_TOKEN: ${HF_TOKEN:-}
+    volumes:
+      - ./models:/models

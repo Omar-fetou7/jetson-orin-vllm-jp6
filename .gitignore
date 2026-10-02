@@ -1,0 +1,8 @@
+# build outputs and local data
+wheels/
+docker/wheels/
+docker/models/
+models/
+*.log
+__pycache__/
+.venv/
